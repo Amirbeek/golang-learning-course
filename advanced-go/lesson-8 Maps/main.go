@@ -56,7 +56,7 @@ var (
 	ErrTruckNotFound  = errors.New("truck not found")
 )
 
-func processFleet(ctx context.Context, truck Truck) error {
+func processTruck(ctx context.Context, truck Truck) error {
 	fmt.Println("processTruck:", truck)
 	userId := ctx.Value(UserIdKey).(int)
 	log.Println("userId:", userId)
@@ -83,22 +83,55 @@ func processFleet(ctx context.Context, truck Truck) error {
 	return nil
 }
 
-func processTruck(ctx context.Context, trucks []Truck) error {
+func processFleet(ctx context.Context, trucks []Truck) error {
 	var wg sync.WaitGroup
+
+	errorChan := make(chan error, len(trucks))
+
 	for _, t := range trucks {
 		wg.Add(1)
 		go func(t Truck) {
 			defer wg.Done()
-			if err := processFleet(ctx, t); err != nil {
+			if err := processTruck(ctx, t); err != nil {
 				fmt.Printf("error processing fleet: %v\n", err)
+				errorChan <- err
 			}
+
 		}(t)
 	}
 	wg.Wait()
+	close(errorChan)
+	//select {
+	//case err := <-errorChan:
+	//	return err
+	//default:
+	//	return nil
+	//}
+	var errs []error
+
+	for err := range errorChan {
+		log.Printf("error processing fleet: %v\n", err)
+		errs = append(errs, err)
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("some fleet processing failed: %v", errs)
+	}
+
 	return nil
+
 }
 
 func main() {
+	// MAPS
+	m := make(map[string]int)
+
+	a, exists := m["a"]
+	// delete(m, "a") "delete"
+	// clear(m) delete everything in map
+	//map.
+	if exists {
+		fmt.Println(a)
+	}
 
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, UserIdKey, 442)
@@ -111,7 +144,7 @@ func main() {
 	}
 	start := time.Now()
 
-	if err := processTruck(ctx, fleet); err != nil {
+	if err := processFleet(ctx, fleet); err != nil {
 		fmt.Printf("Error processing fleet: %v", err)
 	}
 	fmt.Println("processTruck took:", time.Since(start))
