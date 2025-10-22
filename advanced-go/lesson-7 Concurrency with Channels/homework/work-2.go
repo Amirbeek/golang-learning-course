@@ -27,7 +27,6 @@ func GetResponse(ctx context.Context, url WebUrl) string {
 
 func main() {
 	var wg sync.WaitGroup
-
 	deadline := time.Now().Add(5 * time.Second)
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()
