@@ -17,19 +17,23 @@ type application struct {
 
 type config struct {
 	Addr string
+	DB   dbConfig
+}
+
+type dbConfig struct {
+	Addr         string // The database connection address (DSN or host:port)
+	MaxOpenConns int    // The maximum number of open connections allowed to the database at one time
+	MaxIdleConns int    // The maximum number of idle (unused) connections that can remain open in the pool
+	MaxIdleTime  string // The maximum amount of time a connection can remain idle before being closed (e.g., "5m" = 5 minutes)
 }
 
 func (app *application) mount() *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Use(middleware.Logger)    // logs each request (method, path, time, etc.).
-	r.Use(middleware.Recoverer) // catches panics so the server doesn’t crash.
-	r.Use(middleware.RequestID) // adds a unique ID to each request (useful for tracking).
-	r.Use(middleware.RealIP)    // gets the real client IP address (even behind proxies).
-
-	// Set a timeout value on the request context (ctx), that will signal
-	// through ctx.Done() that the request has timed out and further
-	// processing should be stopped.
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -43,15 +47,14 @@ func (app *application) mount() *chi.Mux {
 }
 
 func (app *application) run(mux *chi.Mux) error {
-
-	cfg := http.Server{
+	srv := http.Server{
 		Addr:         app.config.Addr,
 		Handler:      mux,
-		WriteTimeout: 15 * time.Second, // max time to write a response.
-		ReadTimeout:  15 * time.Second, // max time to read a request
-		IdleTimeout:  60 * time.Second, // max time to keep a connection open when idle.
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	log.Printf("server has started at %s", app.config.Addr)
-	return cfg.ListenAndServe()
+	return srv.ListenAndServe()
 }
