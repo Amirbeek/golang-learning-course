@@ -50,7 +50,7 @@ FROM posts WHERE id = $1`
 		&post.Content,
 		&post.Title,
 		&post.UserId,
-		&post.Tags,
+		pq.Array(&post.Tags),
 		&post.CreatedAt,
 		&post.UpdatedAt,
 	)
