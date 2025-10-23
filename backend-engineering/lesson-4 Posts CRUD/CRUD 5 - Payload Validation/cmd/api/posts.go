@@ -21,7 +21,7 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 	var payload CreatePostPayload
 
 	if err := readJSON(w, r, &payload); err != nil {
-		writeJsonError(w, http.StatusBadRequest, err.Error())
+		app.badRequestResponse(w, r, err)
 		return
 	}
 	//fmt.Printf("payload: %+v\n", payload)
@@ -29,7 +29,7 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 	payload.Content = strings.TrimSpace(payload.Content)
 
 	if payload.Title == "" || payload.Content == "" {
-		writeJsonError(w, http.StatusBadRequest, "title and content are required")
+		app.internalServeError(w, r, errors.New("title or content is empty"))
 		return
 	}
 
@@ -41,12 +41,12 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := app.store.Posts.Create(r.Context(), post); err != nil {
-		writeJsonError(w, http.StatusInternalServerError, err.Error())
+		app.internalServeError(w, r, err)
 		return
 	}
 
 	if err := writeJSON(w, http.StatusCreated, post); err != nil {
-		writeJsonError(w, http.StatusInternalServerError, err.Error())
+		app.internalServeError(w, r, err)
 		return
 	}
 }
@@ -57,22 +57,22 @@ func (app *application) getPostHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	postID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		writeJsonError(w, http.StatusBadRequest, "invalid post id")
+		app.internalServeError(w, r, err)
 		return
 	}
 
 	post, err := app.store.Posts.GetById(ctx, postID)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
-			writeJsonError(w, http.StatusNotFound, "post not found")
+			app.notFoundResponse(w, r, err)
 		} else {
-			writeJsonError(w, http.StatusInternalServerError, err.Error())
+			app.internalServeError(w, r, err)
 		}
 		return
 	}
 
 	if err := writeJSON(w, http.StatusOK, post); err != nil {
-		writeJsonError(w, http.StatusInternalServerError, err.Error())
+		app.internalServeError(w, r, err)
 		return
 	}
 }
