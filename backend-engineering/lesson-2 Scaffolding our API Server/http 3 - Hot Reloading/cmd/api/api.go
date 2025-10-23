@@ -25,13 +25,10 @@ func (app *application) mount() *chi.Mux {
 	r.Use(middleware.RequestID) // adds a unique ID to each request (useful for tracking).
 	r.Use(middleware.RealIP)    // gets the real client IP address (even behind proxies).
 
-
 	// Set a timeout value on the request context (ctx), that will signal
 	// through ctx.Done() that the request has timed out and further
 	// processing should be stopped.
 	r.Use(middleware.Timeout(60 * time.Second))
-
-
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Welcome World"))

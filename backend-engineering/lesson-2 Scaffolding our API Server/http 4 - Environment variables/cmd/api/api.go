@@ -40,8 +40,8 @@ func (app *application) mount() *chi.Mux {
 	return r
 }
 
-func (app *application) run() error {
-	mux := http.NewServeMux()
+func (app *application) run(mux *chi.Mux) error {
+
 	cfg := http.Server{
 		Addr:         app.config.Addr,
 		Handler:      mux,
@@ -49,6 +49,7 @@ func (app *application) run() error {
 		ReadTimeout:  15 * time.Second, // max time to read a request
 		IdleTimeout:  60 * time.Second, // max time to keep a connection open when idle.
 	}
+
 	log.Printf("server has started at %s", app.config.Addr)
 	return cfg.ListenAndServe()
 }
