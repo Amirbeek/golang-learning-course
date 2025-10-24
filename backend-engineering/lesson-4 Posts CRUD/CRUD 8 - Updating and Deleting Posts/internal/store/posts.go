@@ -10,14 +10,14 @@ import (
 )
 
 type Post struct {
-	ID        int64     `json:"id"`
-	Content   string    `json:"content"`
-	Title     string    `json:"title"`
-	UserId    int64     `json:"userId"`
-	Tags      []string  `json:"tags"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
-	Comments  []*Comment  `json:"comments"`
+	ID        int64      `json:"id"`
+	Content   string     `json:"content"`
+	Title     string     `json:"title"`
+	UserId    int64      `json:"userId"`
+	Tags      []string   `json:"tags"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
+	Comments  []*Comment `json:"comments"`
 }
 
 type PostsStore struct {
@@ -64,4 +64,36 @@ FROM posts WHERE id = $1`
 		}
 	}
 	return &post, nil
+}
+
+func (s *PostsStore) DeleteById(ctx context.Context, id int64) error {
+	query := `
+    DELETE FROM posts WHERE id = $1;
+`
+	result, err := s.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return DeleteError
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return NotRowEffectedError
+	}
+
+	if rowsAffected == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}
+
+func (s *PostsStore) Update(ctx context.Context, p *Post) error {
+	query := `
+    UPDATE posts
+    SET title = $1, content = $2
+    WHERE id = $3
+    `
+	_, err := s.db.ExecContext(ctx, query, p.Title, p.Content, p.ID)
+
+	return err
 }

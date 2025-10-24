@@ -39,16 +39,19 @@ func (app *application) mount() *chi.Mux {
 
 	r.Route("/v1", func(r chi.Router) {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("Welcome World"))
+			w.Write([]byte("Server is running, and ready to accept connections"))
 		})
 		r.Get("/health", app.healthCheckHandler)
-
 		r.Route("/posts", func(r chi.Router) {
 			r.Post("/", app.createPostHandler)
-			r.Get("/{id}", app.getPostHandler)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Use(app.postsContextMiddleware)
+				r.Get("/", app.getPostHandler)
+				r.Delete("/", app.deletePostHandler)
+				r.Patch("/", app.updatePostHandler)
+			})
 		})
 	})
-
 	return r
 }
 

@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -29,7 +28,7 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 		app.badRequestResponse(w, r, err)
 		return
 	}
-	//fmt.Printf("payload: %+v\n", payload)
+
 	payload.Title = strings.TrimSpace(payload.Title)
 	payload.Content = strings.TrimSpace(payload.Content)
 
@@ -57,7 +56,6 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (app *application) getPostHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("got")
 	ctx := r.Context()
 	idStr := chi.URLParam(r, "id")
 	postID, err := strconv.ParseInt(idStr, 10, 64)
@@ -75,7 +73,13 @@ func (app *application) getPostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	comments, err := app.store.Comments.GetByPostId(ctx, postID)
+	if err != nil {
+		app.internalServeError(w, r, err)
+		return
+	}
 
+	post.Comments = comments
 	if err := writeJSON(w, http.StatusOK, post); err != nil {
 		app.internalServeError(w, r, err)
 		return
