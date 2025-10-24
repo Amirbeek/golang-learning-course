@@ -7,13 +7,17 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("record not found")
+	ErrNotFound         = errors.New("record not found")
+	NotRowEffectedError = errors.New("error rows affected")
+	DeleteError         = errors.New("error deleting record")
 )
 
 type Storage struct {
 	Posts interface {
 		Create(context.Context, *Post) error
 		GetById(context.Context, int64) (*Post, error)
+		DeleteById(context.Context, int64) error
+		Update(context.Context, *Post) error
 	}
 	Users interface {
 		Create(context.Context, *User) error
