@@ -31,33 +31,27 @@ type PostWithMetadata struct {
 	CommentsCount int `json:"comments_count"`
 }
 
-func (s *PostsStore) GetUserFeed(ctx context.Context, id int64) ([]PostWithMetadata, error) {
+func (s *PostsStore) GetUserFeed(ctx context.Context, userID int64, fq PaginatedFeedQuery) ([]PostWithMetadata, error) {
 	query := `
 		SELECT 
-			p.id,
-			p.user_id,
-			p.title,
-			p.content,
-			p.created_at,
-			p.version,
-			p.tags,
+			p.id, p.user_id, p.title, p.content, p.created_at, p.version, p.tags,
 			u.username,
 			COUNT(c.id) AS comments_count
 		FROM posts p
-		LEFT JOIN comments c ON p.id = c.post_id
+		LEFT JOIN comments c ON c.post_id = p.id
 		LEFT JOIN users u ON p.user_id = u.id
-		WHERE p.user_id = $1
-		OR p.user_id IN (
-			SELECT user_id FROM followers WHERE follower_id = $1
-		)
+		LEFT JOIN followers f ON f.user_id = p.user_id AND f.follower_id = $1
+		WHERE 
+			(p.user_id = $1 OR f.follower_id = $1)
 		GROUP BY p.id, u.username
-		ORDER BY p.created_at DESC;
+		ORDER BY p.created_at ` + fq.Sort + `
+		LIMIT $2 OFFSET $3
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeOutDuration)
 	defer cancel()
 
-	rows, err := s.db.QueryContext(ctx, query, id)
+	rows, err := s.db.QueryContext(ctx, query, userID, fq.Limit, fq.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -66,9 +60,8 @@ func (s *PostsStore) GetUserFeed(ctx context.Context, id int64) ([]PostWithMetad
 	var feed []PostWithMetadata
 	for rows.Next() {
 		var p PostWithMetadata
-		p.User = &User{} // ✅ fix nil pointer
-
-		err := rows.Scan(
+		p.User = &User{}
+		if err := rows.Scan(
 			&p.ID,
 			&p.UserId,
 			&p.Title,
@@ -78,16 +71,10 @@ func (s *PostsStore) GetUserFeed(ctx context.Context, id int64) ([]PostWithMetad
 			pq.Array(&p.Tags),
 			&p.User.Username,
 			&p.CommentsCount,
-		)
-		if err != nil {
+		); err != nil {
 			return nil, err
 		}
-
 		feed = append(feed, p)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
 	}
 
 	return feed, nil

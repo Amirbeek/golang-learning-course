@@ -66,7 +66,11 @@ func (app *application) mount() *chi.Mux {
 				//r.Use(app.postsContextMiddleware)
 				//r.Patch("/", app.updatePostHandler)
 			})
+			r.Group(func(r chi.Router) {
+				r.Get("/feed", app.getUserFeedHandler)
+			})
 		})
+
 	})
 	return r
 }
