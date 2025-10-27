@@ -23,7 +23,7 @@ const usrCtxKey userKey = "user"
 //	@Produce		json
 //	@Param			id	path		int	true	"User ID"
 //	@Success		200	{object}	store.User
-//	@Failure		400	{object}	error "User payload missing"
+//	@Failure		400	{object}	error	"User payload missing"
 //	@Failure		404	{object}	error
 //	@Failure		500	{object}	error
 //	@Security		ApiKeyAuth
