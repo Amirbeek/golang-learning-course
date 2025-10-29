@@ -4,8 +4,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/amirbeek/social/internal/auth"
+	"github.com/amirbeek/social/internal/ratelimiter"
 	"github.com/amirbeek/social/internal/store"
 	"github.com/amirbeek/social/internal/store/cache"
 	"github.com/go-chi/chi/v5"
@@ -20,11 +22,23 @@ func NewTestAppApplication(t *testing.T) *application {
 	mockStore := store.NewMockStore()
 	mockCacheStore := cache.NewCacheMockStore()
 	testAuth := &auth.TestAuthenticator{}
+
+	// Default test rate limiter config (matches api_test expectations)
+	cfg := config{
+		rateLimiter: ratelimiter.Config{
+			RequestsPerTimeFrame: 20,
+			TimeFrame:            5 * time.Second,
+			Enabled:              true,
+		},
+	}
+
 	return &application{
+		config:        cfg,
 		logger:        logger,
 		store:         mockStore,
 		cacheStorage:  mockCacheStore,
 		authenticator: testAuth,
+		rateLimiter:   ratelimiter.NewFixedWindowLimiter(cfg.rateLimiter.RequestsPerTimeFrame, cfg.rateLimiter.TimeFrame),
 	}
 }
 

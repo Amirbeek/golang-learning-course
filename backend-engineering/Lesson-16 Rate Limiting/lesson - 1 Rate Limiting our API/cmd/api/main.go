@@ -93,6 +93,13 @@ func main() {
 	logger := zap.Must(zap.NewProduction()).Sugar()
 	defer logger.Sync()
 
+	// Log rate limiter config early
+	logger.Infow("Rate limiter config",
+		"enabled", cfg.rateLimiter.Enabled,
+		"limit", cfg.rateLimiter.RequestsPerTimeFrame,
+		"window", cfg.rateLimiter.TimeFrame.String(),
+	)
+
 	// Connect to database
 	dbConn, err := db.New(
 		cfg.DB.Addr,
@@ -140,6 +147,16 @@ func main() {
 		mailer:        mailtrap,
 		authenticator: jwtAuthenticator,
 		rateLimiter:   rateLimiter,
+	}
+
+	// Log rate limiter status before starting server
+	if cfg.rateLimiter.Enabled {
+		logger.Infow("Rate limiter ENABLED",
+			"limit", cfg.rateLimiter.RequestsPerTimeFrame,
+			"window", cfg.rateLimiter.TimeFrame.String(),
+		)
+	} else {
+		logger.Info("Rate limiter DISABLED")
 	}
 
 	mux := app.mount()

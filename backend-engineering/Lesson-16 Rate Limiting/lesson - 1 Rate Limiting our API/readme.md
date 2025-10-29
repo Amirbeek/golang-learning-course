@@ -6,6 +6,9 @@ $env:MIGRATIONS_PATH="./cmd/migrate/migrations"
 $env:MAIL_TRAP_API_KEY="e9ae7e7015894ca627fb0a83ce47da15"
 $env:REDIS_ENABLED="true"
 $env:REDIS_ADDR="localhost:6379"
+$env:RATE_LIMITER_ENABLED="true"
+$env:RATELIMITER_REQUESTS_COUNT="5"
+
 
  siz `autocannon` bilan **load testing** qilayapsiz, ya’ni serveringizning **performance (TPS, RPS, latency, va stability)** ni tekshiryapsiz.
 
