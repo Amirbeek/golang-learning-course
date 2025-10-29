@@ -1,6 +1,8 @@
 package main
 
 import (
+	"expvar"
+	"runtime"
 	"time"
 
 	"github.com/amirbeek/social/internal/auth"
@@ -160,6 +162,15 @@ func main() {
 	}
 
 	mux := app.mount()
+
+	expvar.NewString("version").Set(version)
+	expvar.Publish("database", expvar.Func(func() any {
+		return dbConn.Stats()
+	}))
+
+	expvar.Publish("goroutines", expvar.Func(func() any {
+		return runtime.NumGoroutine()
+	}))
 
 	logger.Infof("Server starting at http://localhost%s...", cfg.Addr)
 

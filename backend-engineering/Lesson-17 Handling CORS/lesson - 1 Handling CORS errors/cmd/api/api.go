@@ -13,6 +13,7 @@ import (
 
 	"github.com/amirbeek/social/docs"
 	"github.com/amirbeek/social/internal/auth"
+	"github.com/amirbeek/social/internal/env"
 	"github.com/amirbeek/social/internal/mailer"
 	"github.com/amirbeek/social/internal/ratelimiter"
 	"github.com/amirbeek/social/internal/store"
@@ -93,20 +94,20 @@ type dbConfig struct {
 func (app *application) mount() *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
-		// AllowedOrigins:   []string{"https://foo.com"}, // Use this to allow specific origin hosts
-		AllowedOrigins: []string{"https://*", "http://*"},
-		// AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
+		AllowedOrigins: []string{env.GetString("CORS_ALLOWED_ORIGIN", "http://localhost:5174")},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: false,
-		MaxAge:           300, // Maximum value not ignored by any of major browsers
+		MaxAge:           300,
 	}))
+
 	r.Use(app.RateLimiterMiddleware)
 
 	// SEt time out value on the request context (ctx), that will signal
