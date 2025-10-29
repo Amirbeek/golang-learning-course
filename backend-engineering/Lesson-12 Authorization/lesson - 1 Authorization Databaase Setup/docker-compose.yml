@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16.3
+    container_name: postgres-db
+    environment:
+      POSTGRES_DB: social
+      POSTGRES_USER: supervillager
+      POSTGRES_PASSWORD: adminpassword
+    ports:
+      - "5433:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./script:/docker-entrypoint-initdb.d
+
+volumes:
+  db-data:
