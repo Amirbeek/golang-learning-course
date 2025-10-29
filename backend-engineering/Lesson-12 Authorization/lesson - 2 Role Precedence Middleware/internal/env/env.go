@@ -7,7 +7,7 @@ import (
 
 func GetString(key, fallback string) string {
 	val, ok := os.LookupEnv(key)
-	if ok {
+	if !ok {
 		return fallback
 	}
 	return val
@@ -15,7 +15,7 @@ func GetString(key, fallback string) string {
 
 func GetInt(key string, fallback int) int {
 	val, ok := os.LookupEnv(key)
-	if ok {
+	if !ok {
 		return fallback
 	}
 	ValAtoi, err := strconv.Atoi(val)

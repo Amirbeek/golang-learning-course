@@ -59,6 +59,12 @@ func main() {
 				apiKey: env.GetString("MAIL_TRAP_API_KEY", "e9ae7e7015894ca627fb0a83ce47da15"),
 			},
 		},
+		auth: authConfig{
+			basic: basicConfig{
+				user: env.GetString("AUTH_BASIC_USER", "admin"),
+				pass: env.GetString("AUTH_BASIC_PASS", "admin"),
+			},
+		},
 	}
 
 	logger := zap.Must(zap.NewProduction()).Sugar()

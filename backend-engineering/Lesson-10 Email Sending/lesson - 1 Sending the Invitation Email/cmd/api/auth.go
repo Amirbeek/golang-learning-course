@@ -3,8 +3,10 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 
+	"github.com/amirbeek/social/internal/mailer"
 	"github.com/amirbeek/social/internal/store"
 	"github.com/google/uuid"
 )
@@ -83,6 +85,29 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	// mail
+	isProdEnv := app.config.env == "production"
+	ActivationURL := fmt.Sprintf("%/confirm/%s", app.config.frontendURL, plainTkn)
+	vars := struct {
+		Username      string
+		ActivationURL string
+	}{
+		Username:      user.Username,
+		ActivationURL: ActivationURL,
+	}
+	err = app.mailer.Send(mailer.UserWelcomeTemplate, user.Username, user.Email, vars, !isProdEnv)
+	if err != nil {
+
+		app.logger.Errorw("error sending welcome email", "error", err)
+
+		if err := app.store.Users.Delete(ctx, user.ID); err != nil {
+			app.logger.Errorw("error deleting user", "error", err)
+			app.internalServeError(w, r, err)
+			return
+		}
+		app.internalServeError(w, r, err)
+		return
+	}
+
 	if err := app.jsonResponse(w, http.StatusCreated, userWithToken); err != nil {
 		app.internalServeError(w, r, err)
 		return

@@ -5,7 +5,7 @@ import (
 
 	"github.com/amirbeek/social/internal/db"
 	"github.com/amirbeek/social/internal/env"
-	mailer2 "github.com/amirbeek/social/internal/mailer"
+	mailer "github.com/amirbeek/social/internal/mailer"
 	store2 "github.com/amirbeek/social/internal/store"
 	"go.uber.org/zap"
 )
@@ -51,9 +51,12 @@ func main() {
 		env: env.GetString("ENV", "development"),
 		mail: mailConfig{
 			exp:       time.Hour * 24 * 3,
-			fromEmail: env.GetString("FROM_EMAIL", "test@gmail.com"),
+			fromEmail: env.GetString("FROM_EMAIL", "hello@amirbekshomurodov.me"),
 			sendGrid: sendGridConfig{
-				apiKey: env.GetString("SENDGRID_API_KEY", "supervillager"),
+				apiKey: env.GetString("SENDGRID_API_KEY", ""),
+			},
+			mailTrap: mailTrapConfig{
+				apiKey: env.GetString("MAIL_TRAP_API_KEY", "e9ae7e7015894ca627fb0a83ce47da15"),
 			},
 		},
 	}
@@ -76,12 +79,18 @@ func main() {
 	//  storage layer
 	store := store2.NewStorage(dbConn)
 
-	mailer := mailer2.NewSendGrid(cfg.mail.sendGrid.apiKey, cfg.mail.fromEmail)
+	//mailer := mailer.NewSendGrid(cfg.mail.sendGrid.apiKey, cfg.mail.fromEmail)
+
+	mailtrap, err := mailer.NewMailTrapClient(cfg.mail.mailTrap.apiKey, cfg.mail.fromEmail)
+	if err != nil {
+		logger.Fatal("Mailtrap client failed: %v", err)
+	}
+
 	app := &application{
 		config: cfg,
 		store:  store,
 		logger: logger,
-		mailer: mailer,
+		mailer: mailtrap,
 	}
 
 	mux := app.mount()

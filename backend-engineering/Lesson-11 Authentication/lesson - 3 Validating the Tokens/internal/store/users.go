@@ -33,14 +33,19 @@ type password struct {
 }
 
 func (p *password) Set(text string) error {
-	hash, err := bcrypt.GenerateFromPassword([]byte(text), bcrypt.MinCost)
-
+	hash, err := bcrypt.GenerateFromPassword([]byte(text), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
+
 	p.text = &text
 	p.hash = hash
+
 	return nil
+}
+
+func (p *password) Compare(p2 string) error {
+	return bcrypt.CompareHashAndPassword(p.hash, []byte(p2))
 }
 
 type UserStore struct {
@@ -87,7 +92,7 @@ func (s *UserStore) GetUserById(ctx context.Context, id int64) (*User, error) {
 		&user.ID,
 		&user.Username,
 		&user.Email,
-		&user.Password,
+		&user.Password.hash,
 		&user.CreatedAt,
 	)
 

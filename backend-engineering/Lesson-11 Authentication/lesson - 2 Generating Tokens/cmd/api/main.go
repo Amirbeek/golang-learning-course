@@ -3,9 +3,10 @@ package main
 import (
 	"time"
 
+	"github.com/amirbeek/social/internal/auth"
 	"github.com/amirbeek/social/internal/db"
 	"github.com/amirbeek/social/internal/env"
-	mailer "github.com/amirbeek/social/internal/mailer"
+	"github.com/amirbeek/social/internal/mailer"
 	store2 "github.com/amirbeek/social/internal/store"
 	"go.uber.org/zap"
 )
@@ -64,6 +65,11 @@ func main() {
 				user: env.GetString("AUTH_BASIC_USER", "admin"),
 				pass: env.GetString("AUTH_BASIC_PASS", "admin"),
 			},
+			token: tokenConfig{
+				secret: env.GetString("AUTH_TOKEN_SECRET", "example"),
+				exp:    time.Hour * 24 * 3,
+				iss:    "gophersocial",
+			},
 		},
 	}
 
@@ -85,18 +91,22 @@ func main() {
 	//  storage layer
 	store := store2.NewStorage(dbConn)
 
+	// Mail server
 	//mailer := mailer.NewSendGrid(cfg.mail.sendGrid.apiKey, cfg.mail.fromEmail)
-
 	mailtrap, err := mailer.NewMailTrapClient(cfg.mail.mailTrap.apiKey, cfg.mail.fromEmail)
+
+	jwtAuthenticator := auth.NewJWTAuthenticator(cfg.auth.token.secret, cfg.auth.token.iss, cfg.auth.token.iss)
+
 	if err != nil {
 		logger.Fatal("Mailtrap client failed: %v", err)
 	}
 
 	app := &application{
-		config: cfg,
-		store:  store,
-		logger: logger,
-		mailer: mailtrap,
+		config:        cfg,
+		store:         store,
+		logger:        logger,
+		mailer:        mailtrap,
+		authenticator: jwtAuthenticator,
 	}
 
 	mux := app.mount()

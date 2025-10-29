@@ -57,7 +57,7 @@ func main() {
 				apiKey: env.GetString("SENDGRID_API_KEY", ""),
 			},
 			mailTrap: mailTrapConfig{
-				apiKey: env.GetString("MAIL_TRAP_API_KEY", "e9ae7e7015894ca627fb0a83ce47da15"),
+				apiKey: env.GetString("MAIL_TRAP_API_KEY", ""),
 			},
 		},
 		auth: authConfig{

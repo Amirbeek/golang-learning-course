@@ -22,15 +22,20 @@ type application struct {
 	mailer mailer.Client
 }
 
-type sendGridConfig struct {
-	apiKey string
-}
-
 type mailConfig struct {
 	sendGrid  sendGridConfig
 	fromEmail string
 	exp       time.Duration
+	mailTrap  mailTrapConfig
 }
+
+type sendGridConfig struct {
+	apiKey string
+}
+type mailTrapConfig struct {
+	apiKey string
+}
+
 type config struct {
 	Addr        string
 	DB          dbConfig
