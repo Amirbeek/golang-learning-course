@@ -30,6 +30,14 @@ func (app *application) conflictResponse(w http.ResponseWriter, r *http.Request,
 	)
 	writeJsonError(w, http.StatusConflict, err.Error())
 }
+func (app *application) forbiddenResponse(w http.ResponseWriter, r *http.Request, err error) {
+	app.logger.Warnw("forbidden response",
+		"method", r.Method,
+		"path", r.URL.Path,
+		"err", err,
+	)
+	writeJsonError(w, http.StatusForbidden, "forbidden")
+}
 
 func (app *application) notFoundResponse(w http.ResponseWriter, r *http.Request, err error) {
 	app.logger.Warnw("not found error",

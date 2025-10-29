@@ -31,6 +31,7 @@ type Storage struct {
 		Create(ctx context.Context, db *sql.Tx, user *User) error
 		Activate(ctx context.Context, token string) error
 		Delete(context.Context, int64) error
+		GetUserByEmail(context.Context, string) (*User, error)
 	}
 	Comments interface {
 		GetByPostId(context.Context, int64) ([]*Comment, error)

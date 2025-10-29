@@ -1,12 +1,69 @@
 package main
 
 import (
+	"context"
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
 )
+
+func (app *application) AuthTokenMiddleware(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			app.unauthorizedErrorResponse(w, r, fmt.Errorf("authorization header missing"))
+			return
+		}
+
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+			app.unauthorizedErrorResponse(w, r, fmt.Errorf("authorization header format must be 'Bearer <token>'"))
+			return
+		}
+
+		tokenString := parts[1]
+		jwtToken, err := app.authenticator.ValidateToken(tokenString)
+		if err != nil {
+			app.unauthorizedErrorResponse(w, r, err)
+			return
+		}
+
+		if !jwtToken.Valid {
+			app.unauthorizedErrorResponse(w, r, fmt.Errorf("invalid token"))
+			return
+		}
+
+		claims, ok := jwtToken.Claims.(jwt.MapClaims)
+		if !ok {
+			app.unauthorizedErrorResponse(w, r, fmt.Errorf("invalid JWT claims"))
+			return
+		}
+
+		userID, err := strconv.ParseInt(fmt.Sprintf("%v", claims["sub"]), 10, 64)
+		if err != nil {
+			app.unauthorizedErrorResponse(w, r, fmt.Errorf("invalid user ID in token"))
+			return
+		}
+
+		user, err := app.store.Users.GetUserById(r.Context(), userID)
+		if err != nil {
+			app.unauthorizedErrorResponse(w, r, err)
+			return
+		}
+
+		type contextKey string
+		const userContextKey = contextKey("user")
+
+		ctx := context.WithValue(r.Context(), userContextKey, user)
+		handler.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
 
 func (app *application) BasicAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

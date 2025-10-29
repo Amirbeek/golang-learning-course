@@ -5,6 +5,7 @@ import (
 
 	"github.com/amirbeek/social/internal/db"
 	"github.com/amirbeek/social/internal/env"
+	mailer2 "github.com/amirbeek/social/internal/mailer"
 	store2 "github.com/amirbeek/social/internal/store"
 	"go.uber.org/zap"
 )
@@ -38,8 +39,9 @@ const version string = "v0.1"
 func main() {
 	// Load configuration from environment
 	cfg := config{
-		Addr:   env.GetString("ADDR", ":8081"), // default port :8081
-		apiURL: env.GetString("EXTERNAL_URL", "localhost:8081"),
+		Addr:        env.GetString("ADDR", ":8081"), // default port :8081
+		apiURL:      env.GetString("EXTERNAL_URL", "localhost:8081"),
+		frontendURL: env.GetString("FRONTEND_URL", "localhost:8081"),
 		DB: dbConfig{
 			Addr:         env.GetString("DB_ADDR", "postgres://supervillager:adminpassword@localhost:5433/social?sslmode=disable"),
 			MaxOpenConns: env.GetInt("DB_MAX_OPEN_CONNS", 5),
@@ -48,7 +50,11 @@ func main() {
 		},
 		env: env.GetString("ENV", "development"),
 		mail: mailConfig{
-			exp: time.Hour * 24 * 3,
+			exp:       time.Hour * 24 * 3,
+			fromEmail: env.GetString("FROM_EMAIL", "test@gmail.com"),
+			sendGrid: sendGridConfig{
+				apiKey: env.GetString("SENDGRID_API_KEY", "supervillager"),
+			},
 		},
 	}
 
@@ -70,10 +76,12 @@ func main() {
 	//  storage layer
 	store := store2.NewStorage(dbConn)
 
+	mailer := mailer2.NewSendGrid(cfg.mail.sendGrid.apiKey, cfg.mail.fromEmail)
 	app := &application{
 		config: cfg,
 		store:  store,
 		logger: logger,
+		mailer: mailer,
 	}
 
 	mux := app.mount()

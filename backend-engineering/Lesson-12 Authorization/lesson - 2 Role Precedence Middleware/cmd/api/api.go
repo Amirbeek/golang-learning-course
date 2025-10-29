@@ -87,7 +87,10 @@ func (app *application) mount() *chi.Mux {
 	r.Route("/v1", func(r chi.Router) {
 		r.With(app.BasicAuthMiddleware).Get("/health", app.healthCheckHandler)
 
-		docsURL := fmt.Sprintf("%s/swagger/doc.json", app.config.Addr)
+		docsURL := fmt.Sprintf("http://%s/v1/swagger/doc.json", app.config.apiURL)
+		r.Get("/swagger", func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, "/v1/swagger/index.html", http.StatusMovedPermanently)
+		})
 		r.Get("/swagger/*", httpSwagger.Handler(httpSwagger.URL(docsURL)))
 		r.Route("/posts", func(r chi.Router) {
 			r.Use(app.AuthTokenMiddleware)
@@ -95,8 +98,8 @@ func (app *application) mount() *chi.Mux {
 			r.Route("/{id}", func(r chi.Router) {
 				r.Use(app.postsContextMiddleware)
 				r.Get("/", app.getPostHandler)
-				r.Delete("/", app.deletePostHandler)
-				r.Patch("/", app.updatePostHandler)
+				r.Delete("/", app.checkPostOwnership("admin", app.deletePostHandler))
+				r.Patch("/", app.checkPostOwnership("moderator", app.updatePostHandler))
 			})
 		})
 
@@ -115,7 +118,6 @@ func (app *application) mount() *chi.Mux {
 			})
 			r.Group(func(r chi.Router) {
 				r.Use(app.AuthTokenMiddleware)
-
 				r.Get("/feed", app.getUserFeedHandler)
 			})
 		})

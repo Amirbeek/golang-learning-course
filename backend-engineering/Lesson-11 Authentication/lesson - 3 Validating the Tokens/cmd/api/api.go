@@ -90,6 +90,7 @@ func (app *application) mount() *chi.Mux {
 		docsURL := fmt.Sprintf("%s/swagger/doc.json", app.config.Addr)
 		r.Get("/swagger/*", httpSwagger.Handler(httpSwagger.URL(docsURL)))
 		r.Route("/posts", func(r chi.Router) {
+			r.Use(app.AuthTokenMiddleware)
 			r.Post("/", app.createPostHandler)
 			r.Route("/{id}", func(r chi.Router) {
 				r.Use(app.postsContextMiddleware)
@@ -103,16 +104,18 @@ func (app *application) mount() *chi.Mux {
 			r.Put("/activate/{token}", app.activateUserHandler)
 
 			r.Route("/{id}", func(r chi.Router) {
-				r.Use(app.userContextMiddleware)
+				r.Use(app.AuthTokenMiddleware)
+
 				r.Get("/", app.getUserHandler)
 				r.Delete("/", app.deleteUserHandler)
-				//PUT / v1 / users / 42 / follow or unfollow
 				r.Put("/follow", app.followUserHandler)
 				r.Put("/unfollow", app.unfollowUserHandler)
 
 				//r.Patch("/", app.updatePostHandler)
 			})
 			r.Group(func(r chi.Router) {
+				r.Use(app.AuthTokenMiddleware)
+
 				r.Get("/feed", app.getUserFeedHandler)
 			})
 		})

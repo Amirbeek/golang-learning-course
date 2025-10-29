@@ -94,9 +94,9 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		Username:      user.Username,
 		ActivationURL: ActivationURL,
 	}
-	err = app.mailer.Send(mailer.UserWelcomeTemplate, user.Username, user.Email, vars, !isProdEnv)
-	if err != nil {
+	_, err = app.mailer.Send(mailer.UserWelcomeTemplate, user.Username, user.Email, vars, !isProdEnv)
 
+	if err != nil {
 		app.logger.Errorw("error sending welcome email", "error", err)
 
 		if err := app.store.Users.Delete(ctx, user.ID); err != nil {

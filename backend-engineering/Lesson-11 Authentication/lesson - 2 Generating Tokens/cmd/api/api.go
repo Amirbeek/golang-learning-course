@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/amirbeek/social/docs"
+	"github.com/amirbeek/social/internal/auth"
 	"github.com/amirbeek/social/internal/mailer"
 	"github.com/amirbeek/social/internal/store"
 	"github.com/go-chi/chi/v5"
@@ -16,10 +17,11 @@ import (
 )
 
 type application struct {
-	config config
-	store  store.Storage
-	logger *zap.SugaredLogger
-	mailer mailer.Client
+	config        config
+	store         store.Storage
+	logger        *zap.SugaredLogger
+	mailer        mailer.Client
+	authenticator auth.Authenticator
 }
 
 type mailConfig struct {
@@ -41,8 +43,15 @@ type basicConfig struct {
 	pass string
 }
 
+type tokenConfig struct {
+	secret string
+	exp    time.Duration
+	iss    string
+}
+
 type authConfig struct {
 	basic basicConfig
+	token tokenConfig
 }
 
 type config struct {
@@ -96,9 +105,7 @@ func (app *application) mount() *chi.Mux {
 			r.Route("/{id}", func(r chi.Router) {
 				r.Use(app.userContextMiddleware)
 				r.Get("/", app.getUserHandler)
-
 				r.Delete("/", app.deleteUserHandler)
-
 				//PUT / v1 / users / 42 / follow or unfollow
 				r.Put("/follow", app.followUserHandler)
 				r.Put("/unfollow", app.unfollowUserHandler)
@@ -111,6 +118,7 @@ func (app *application) mount() *chi.Mux {
 		})
 		r.Route("/authentication", func(r chi.Router) {
 			r.Post("/user", app.registerUserHandler)
+			r.Post("/token", app.createTokenHandler)
 		})
 
 	})

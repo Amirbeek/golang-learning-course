@@ -70,10 +70,6 @@ func (app *application) deleteUserHandler(w http.ResponseWriter, r *http.Request
 
 }
 
-type followUser struct {
-	UserId int64 `json:"user_id"`
-}
-
 // FollowUser godoc
 //
 //	@Summary		Follows a user
@@ -89,15 +85,16 @@ type followUser struct {
 //	@Router			/users/{userID}/follow [put]
 func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request) {
 	followerUser, _ := getUserFromContext(r)
+	followedID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 
-	// TODO: REVERT BACK TO AUTH USERID
-	var payload followUser
-	if err := readJSON(w, r, &payload); err != nil {
+	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
 	}
+
 	ctx := r.Context()
-	err := app.store.Follower.Follow(ctx, followerUser.ID, payload.UserId)
+	err = app.store.Follower.Follow(ctx, followerUser.ID, followedID)
+
 	if err != nil {
 		app.internalServeError(w, r, err)
 		return
@@ -123,16 +120,16 @@ func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request
 //	@Security		ApiKeyAuth
 //	@Router			/users/{userID}/unfollow [put]
 func (app *application) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {
-	unfollowedUser, _ := getUserFromContext(r)
+	unfollowerUser, _ := getUserFromContext(r)
+	followedID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 
-	// TODO: REVERT BACK TO AUTH USERID
-	var payload followUser
-	if err := readJSON(w, r, &payload); err != nil {
+	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
 	}
+
 	ctx := r.Context()
-	err := app.store.Follower.UnFollow(ctx, unfollowedUser.ID, payload.UserId)
+	err = app.store.Follower.UnFollow(ctx, unfollowerUser.ID, followedID)
 	if err != nil {
 		app.internalServeError(w, r, err)
 		return

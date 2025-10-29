@@ -9,10 +9,44 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/amirbeek/social/internal/store"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func (app *application) AuthTokenMiddleware(handler http.Handler) http.Handler {
+func (app *application) checkPostOwnership(role string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, _ := getUserFromContext(r)
+		post, _ := getPostFromCtx(r)
+
+		if post.UserId == user.ID {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		allowed, err := app.checkRolePrecedence(r.Context(), user, role)
+		if err != nil {
+			app.internalServeError(w, r, err)
+			return
+		}
+		if !allowed {
+			app.forbiddenResponse(w, r, nil)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	}
+}
+func (app *application) checkRolePrecedence(ctx context.Context, user *store.User, role string) (bool, error) {
+	targetRole, err := app.store.Roles.GetByName(ctx, role)
+
+	if err != nil {
+		return false, err
+	}
+
+	return user.Role.Level >= targetRole.Level, nil
+}
+
+func (app *application) AuthTokenMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		authHeader := r.Header.Get("Authorization")
@@ -20,14 +54,21 @@ func (app *application) AuthTokenMiddleware(handler http.Handler) http.Handler {
 			app.unauthorizedErrorResponse(w, r, fmt.Errorf("authorization header missing"))
 			return
 		}
+		fmt.Println("FIRST 1: ", authHeader)
 
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-			app.unauthorizedErrorResponse(w, r, fmt.Errorf("authorization header format must be 'Bearer <token>'"))
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			app.unauthorizedErrorResponse(w, r, fmt.Errorf("authorization header is malformed"))
 			return
 		}
+		fmt.Println("FIRST 2: ", parts)
 
+		// Tolerate accidental quotes if the client copied a JSON string value
 		tokenString := parts[1]
+		tokenString = strings.Trim(tokenString, "\"")
+
+		fmt.Println("TOKEN: ", tokenString)
+
 		jwtToken, err := app.authenticator.ValidateToken(tokenString)
 		if err != nil {
 			app.unauthorizedErrorResponse(w, r, err)
@@ -57,11 +98,8 @@ func (app *application) AuthTokenMiddleware(handler http.Handler) http.Handler {
 			return
 		}
 
-		type contextKey string
-		const userContextKey = contextKey("user")
-
-		ctx := context.WithValue(r.Context(), userContextKey, user)
-		handler.ServeHTTP(w, r.WithContext(ctx))
+		ctx := context.WithValue(r.Context(), usrCtxKey, user)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
