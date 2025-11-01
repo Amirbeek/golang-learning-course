@@ -30,7 +30,6 @@ func (rl *FixedWindowRateLimiter) Allow(ip string) (bool, time.Duration) {
 		if !exists {
 			go rl.resetCount(ip)
 		}
-
 		rl.clients[ip]++
 		rl.Unlock()
 		return true, 0
